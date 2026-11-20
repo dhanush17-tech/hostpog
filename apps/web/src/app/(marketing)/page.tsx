@@ -8,6 +8,7 @@ import { AskBox } from "@/components/landing/ask-box";
 import { AlertChip, FeatureFrame, InvestigationArt, LiveChip, PromptChip, Shot } from "@/components/landing/feature-art";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/primitives/accordion";
 import { cn } from "@/lib/utils";
+import { AsciiBlob } from "@/components/landing/ascii-blob";
 
 /** PostHog's logo, used only to refer to PostHog (connect / migrate). File: public/integrations/posthog.png */
 function PostHogLogo({ size = 20, className }: { size?: number; className?: string }) {
@@ -377,12 +378,14 @@ export default function Landing() {
             </div>
           ))}
         </Accordion>
-        <div className="mx-auto mt-24 flex max-w-[1100px] flex-col items-center gap-6 rounded-[32px] bg-gradient-to-br from-[#ff9a52] via-[#f57a2a] to-[#e2620f] px-6 py-14 text-center text-white shadow-[0_30px_60px_-30px_rgb(242_106_18/0.6)]">
-          <h2 className="text-[30px] font-semibold leading-tight tracking-[-0.03em] sm:text-[40px]">Start asking better questions.</h2>
-          <p className="max-w-[460px] text-[15px] text-white/85">Set up in minutes. Self-host for free, forever.</p>
-          <div className="flex flex-wrap justify-center gap-3">
+        <div className="relative mx-auto mt-24 flex max-w-[1100px] flex-col items-center gap-6 overflow-hidden rounded-[32px] bg-gradient-to-br from-[#ff8a3d] via-[#f86a24] to-[#ee4f1c] px-6 py-14 text-center text-white shadow-[0_30px_60px_-30px_rgb(242_106_18/0.6)]">
+          <AsciiBlob className="pointer-events-none absolute inset-0 h-full w-full" />
+          <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgb(170_50_0/0.22),transparent_65%)]" />
+          <h2 className="relative text-[30px] font-semibold leading-tight tracking-[-0.03em] [text-shadow:0_2px_16px_rgb(140_40_0/0.45)] sm:text-[40px]">Move off PostHog in five minutes.</h2>
+          <p className="relative max-w-[600px] text-[15px] text-white [text-shadow:0_1px_10px_rgb(140_40_0/0.55)]">Connect read-only, change one line, switch off. Free forever on your own servers.</p>
+          <div className="relative flex flex-wrap justify-center gap-3">
             <Link href="/signup" className="inline-flex h-11 items-center rounded-xl bg-white px-5 text-[15px] font-medium text-zinc-900 shadow-sm hover:bg-zinc-50">
-              Get started free
+              Migrate from PostHog
             </Link>
             <Link href="/docs/self-host" className="inline-flex h-11 items-center rounded-xl border border-white/40 px-5 text-[15px] font-medium text-white hover:bg-white/10">
               Self-hosting guide
