@@ -1,6 +1,6 @@
 # One image for the whole self-hosted stack: web app, ingest server and migrations.
 # Built by ./hostpog up (deploy/selfhost.compose.yml). The browser-facing ingest URL is baked into the web build.
-FROM node:22-slim AS build
+FROM node:26-slim AS build
 RUN corepack enable
 WORKDIR /app
 COPY . .
@@ -13,7 +13,7 @@ RUN NEXT_PUBLIC_HOSTPOG_INGEST_URL=$NEXT_PUBLIC_HOSTPOG_INGEST_URL NEXT_TELEMETR
     HOSTPOG_MASTER_KEY=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA= \
     pnpm --filter @hostpog/web build
 
-FROM node:22-slim
+FROM node:26-slim
 RUN apt-get update && apt-get install -y --no-install-recommends wget ca-certificates && rm -rf /var/lib/apt/lists/*
 # pnpm is fetched once here, at build time. Containers then start without network access to npm (offline hosts work),
 # and COREPACK_ENABLE_NETWORK=0 makes that a guarantee rather than a hope.

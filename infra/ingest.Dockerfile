@@ -1,5 +1,5 @@
 # HostPog ingest server for Railway. Runs Postgres migrations on start (inside Railway's private network), then serves /v1/capture.
-FROM node:22-slim
+FROM node:26-slim
 RUN corepack enable
 WORKDIR /app
 COPY . .
