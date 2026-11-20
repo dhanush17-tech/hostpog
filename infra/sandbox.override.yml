@@ -1,0 +1,4 @@
+# Only for sandboxes that cannot raise rlimits (e.g. CI containers). Not needed on macOS/Linux hosts.
+services:
+  clickhouse:
+    ulimits: !reset {}

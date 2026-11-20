@@ -1,0 +1,102 @@
+# Self-hosted HostPog: Postgres + ClickHouse + migrations + ingest + web.
+# Use ./hostpog up (it writes deploy/.env with generated secrets). Data lives in Docker volumes.
+name: hostpog
+
+x-app-env: &app-env
+  DATABASE_URL: postgres://hostpog:${POSTGRES_PASSWORD}@postgres:5432/hostpog
+  CLICKHOUSE_URL: http://clickhouse:8123
+  CLICKHOUSE_USER: hostpog
+  CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
+  CLICKHOUSE_DB: hostpog
+  HOSTPOG_EVENTS_BACKEND: clickhouse
+  HOSTPOG_JOB_RUNNER: inline
+  HOSTPOG_MASTER_KEY: ${HOSTPOG_MASTER_KEY}
+  HOSTPOG_MASTER_KEY_VERSION: "1"
+  BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+  BETTER_AUTH_URL: ${HOSTPOG_PUBLIC_URL}
+  HOSTPOG_PUBLIC_URL: ${HOSTPOG_PUBLIC_URL}
+  HOSTPOG_INGEST_PUBLIC_URL: ${HOSTPOG_INGEST_PUBLIC_URL}
+  HOSTPOG_INGEST_INTERNAL_URL: http://ingest:3001
+  HOSTPOG_INTERNAL_TOKEN: ${HOSTPOG_INTERNAL_TOKEN}
+  HOSTPOG_AI_ALLOWED_PRIVATE_HOSTS: ${HOSTPOG_AI_ALLOWED_PRIVATE_HOSTS:-host.docker.internal}
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: hostpog
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: hostpog
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hostpog"]
+      interval: 3s
+      retries: 40
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:25.8-alpine
+    restart: unless-stopped
+    environment:
+      CLICKHOUSE_USER: hostpog
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
+      CLICKHOUSE_DB: hostpog
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
+    volumes: [chdata:/var/lib/clickhouse]
+    ulimits:
+      nofile: { soft: 262144, hard: 262144 }
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8123/ping | grep -q Ok"]
+      interval: 3s
+      retries: 60
+
+  migrate:
+    image: hostpog:local
+    pull_policy: build # local image: build it, never look for it on Docker Hub
+    build:
+      context: ..
+      dockerfile: infra/hostpog.Dockerfile
+      args:
+        NEXT_PUBLIC_HOSTPOG_INGEST_URL: ${HOSTPOG_INGEST_PUBLIC_URL}
+    environment: *app-env
+    command: ["sh", "-c", "pnpm --filter @hostpog/db run migrate && pnpm --filter @hostpog/native run migrate"]
+    depends_on:
+      postgres: { condition: service_healthy }
+      clickhouse: { condition: service_healthy }
+    restart: "no"
+
+  ingest:
+    image: hostpog:local
+    pull_policy: never # built by the migrate service
+    restart: unless-stopped
+    environment:
+      <<: *app-env
+      INGEST_HOST: 0.0.0.0
+      INGEST_PORT: "3001"
+    command: ["pnpm", "--filter", "@hostpog/ingest", "start"]
+    ports: ["${INGEST_PORT:-3001}:3001"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3001/health | grep -q ok"]
+      interval: 5s
+      retries: 30
+
+  web:
+    image: hostpog:local
+    pull_policy: never # built by the migrate service
+    restart: unless-stopped
+    environment: *app-env
+    command: ["pnpm", "--filter", "@hostpog/web", "start"]
+    ports: ["${WEB_PORT:-3000}:3000"]
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/api/health | grep -q '\"ok\":true'"]
+      interval: 5s
+      retries: 40
+
+volumes:
+  pgdata:
+  chdata:

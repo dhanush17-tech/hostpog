@@ -1,0 +1,24 @@
+{
+  "name": "@hostpog/posthog",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "smoke": "tsx scripts/smoke.ts"
+  },
+  "dependencies": {
+    "@hostpog/analytics": "workspace:*",
+    "@hostpog/contracts": "workspace:*",
+    "lz-string": "1.5.0",
+    "@hostpog/db": "workspace:*"
+  },
+  "devDependencies": {
+    "tsx": "4.23.15"
+  }
+}
