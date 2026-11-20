@@ -96,7 +96,7 @@ export function AsciiBlob({ className }: { className?: string }) {
             continue;
           }
           ctx.fillStyle = `rgba(255, 214, 92, ${alpha.toFixed(3)})`;
-          ctx.fillText(RAMP[level], px, py);
+          ctx.fillText(RAMP.charAt(level), px, py);
         }
       }
     };
