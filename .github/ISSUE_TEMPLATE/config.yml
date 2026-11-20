@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security report
+    url: https://github.com/dhanush17-tech/hostpog/security/advisories/new
+    about: Report vulnerabilities privately, not in a public issue.
+  - name: Questions and ideas
+    url: https://github.com/dhanush17-tech/hostpog/discussions
+    about: Ask how to set something up or share what you built.

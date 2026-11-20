@@ -1,0 +1,39 @@
+name: Bug report
+description: Something isn't working as expected
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what happened instead. Screenshots help.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Go to ...
+        2. Click ...
+  - type: dropdown
+    id: setup
+    attributes:
+      label: How are you running HostPog?
+      options:
+        - ./hostpog up (Docker)
+        - pnpm dev (from source)
+        - Other hosting
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      placeholder: git rev-parse --short HEAD
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Output of `./hostpog logs web` or `./hostpog logs ingest` around the error. Remove any keys or tokens.
+      render: shell

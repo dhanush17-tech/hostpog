@@ -1,0 +1,95 @@
+#!/usr/bin/env bash
+# HostPog self-host helper. One command to run the whole stack on any machine with Docker.
+#
+#   ./hostpog up        generate secrets (first run), build and start everything, wait until healthy
+#   ./hostpog status    show service health
+#   ./hostpog logs      follow logs (./hostpog logs web)
+#   ./hostpog down      stop (data is kept in Docker volumes)
+#   ./hostpog update    rebuild from the current checkout and restart
+#   ./hostpog backup    write a Postgres dump to ./backups (ClickHouse: see docs/self-host)
+#
+# Settings live in deploy/.env (created on first run). Set HOSTPOG_PUBLIC_URL / HOSTPOG_INGEST_PUBLIC_URL there
+# before `up` when running on a server with a domain.
+set -euo pipefail
+cd "$(dirname "$0")"
+ENV_FILE=deploy/.env
+COMPOSE=(docker compose --env-file "$ENV_FILE" -f deploy/selfhost.compose.yml)
+
+say() { printf '\033[1m%s\033[0m\n' "$*"; }
+die() { printf '\033[31m%s\033[0m\n' "$*" >&2; exit 1; }
+
+secret() {
+  if command -v openssl >/dev/null 2>&1; then openssl rand -base64 32 | tr -d '\n'
+  else head -c 32 /dev/urandom | base64 | tr -d '\n'; fi
+}
+hexsecret() { if command -v openssl >/dev/null 2>&1; then openssl rand -hex 24; else head -c 24 /dev/urandom | od -An -tx1 | tr -d ' \n'; fi; }
+
+need_docker() {
+  command -v docker >/dev/null 2>&1 || die "Docker is not installed. Get it from https://docs.docker.com/get-docker/ and run ./hostpog up again."
+  docker info >/dev/null 2>&1 || die "Docker is installed but not running. Start Docker Desktop (or the docker service) and try again."
+  docker compose version >/dev/null 2>&1 || die "Docker Compose v2 is required (docker compose). Update Docker and try again."
+}
+
+ensure_env() {
+  [ -f "$ENV_FILE" ] && return
+  say "First run: generating secrets in $ENV_FILE"
+  umask 077
+  cat >"$ENV_FILE" <<EOF
+# HostPog self-host settings. Keep this file private and backed up:
+# HOSTPOG_MASTER_KEY encrypts every stored PostHog and AI key; losing it makes them unreadable.
+HOSTPOG_PUBLIC_URL=http://localhost:3000
+HOSTPOG_INGEST_PUBLIC_URL=http://localhost:3001
+WEB_PORT=3000
+INGEST_PORT=3001
+POSTGRES_PASSWORD=$(hexsecret)
+CLICKHOUSE_PASSWORD=$(hexsecret)
+HOSTPOG_MASTER_KEY=$(secret)
+BETTER_AUTH_SECRET=$(secret)
+HOSTPOG_INTERNAL_TOKEN=$(hexsecret)
+# Ollama on this machine: host.docker.internal is allowed by default.
+HOSTPOG_AI_ALLOWED_PRIVATE_HOSTS=host.docker.internal
+EOF
+}
+
+wait_healthy() {
+  local url
+  url=$(grep '^HOSTPOG_PUBLIC_URL=' "$ENV_FILE" | cut -d= -f2-)
+  say "Waiting for HostPog to come up (first build takes a few minutes)…"
+  for _ in $(seq 1 120); do
+    if "${COMPOSE[@]}" ps --format '{{.Service}} {{.Health}}' 2>/dev/null | grep -q '^web healthy' &&
+      "${COMPOSE[@]}" ps --format '{{.Service}} {{.Health}}' 2>/dev/null | grep -q '^ingest healthy'; then
+      say "HostPog is running → $url"
+      echo "Create your account there. Ingest (SDKs): $(grep '^HOSTPOG_INGEST_PUBLIC_URL=' "$ENV_FILE" | cut -d= -f2-)"
+      return 0
+    fi
+    if "${COMPOSE[@]}" ps -a --format '{{.Service}} {{.State}} {{.ExitCode}}' 2>/dev/null | grep -Eq '^migrate exited [1-9]'; then
+      "${COMPOSE[@]}" logs --tail 40 migrate
+      die "Database migrations failed (logs above)."
+    fi
+    sleep 5
+  done
+  "${COMPOSE[@]}" ps
+  die "HostPog didn't become healthy in 10 minutes. See ./hostpog logs"
+}
+
+cmd=${1:-up}
+case "$cmd" in
+  up)
+    need_docker; ensure_env
+    say "Building and starting HostPog…"
+    "${COMPOSE[@]}" up -d --build
+    wait_healthy ;;
+  update)
+    need_docker; ensure_env
+    "${COMPOSE[@]}" up -d --build --force-recreate migrate ingest web
+    wait_healthy ;;
+  down) need_docker; "${COMPOSE[@]}" down ;;
+  status) need_docker; "${COMPOSE[@]}" ps ;;
+  logs) need_docker; shift || true; "${COMPOSE[@]}" logs -f --tail 100 "$@" ;;
+  backup)
+    need_docker; mkdir -p backups
+    f="backups/postgres-$(date +%Y%m%d-%H%M%S).sql.gz"
+    "${COMPOSE[@]}" exec -T postgres pg_dump -U hostpog hostpog | gzip >"$f"
+    say "Postgres backup written to $f" ;;
+  *) sed -n '2,12p' "$0"; exit 1 ;;
+esac

@@ -1,0 +1,29 @@
+{
+  "name": "hostpog",
+  "private": true,
+  "version": "0.1.0",
+  "description": "HostPog — open-source, AI-native product analytics compatible with existing PostHog installations. Built by DevLabs.",
+  "license": "MIT",
+  "packageManager": "pnpm@10.20.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "infra:up": "node scripts/with-env.mjs docker compose -f infra/docker-compose.yml up -d --wait",
+    "infra:down": "node scripts/with-env.mjs docker compose -f infra/docker-compose.yml down",
+    "db:migrate": "node scripts/with-env.mjs pnpm -r --filter @hostpog/db --filter @hostpog/native run migrate",
+    "dev": "pnpm db:migrate && node scripts/with-env.mjs pnpm -r --parallel --filter @hostpog/web --filter @hostpog/ingest dev",
+    "build": "node scripts/with-env.mjs pnpm -r build",
+    "start": "node scripts/with-env.mjs pnpm -r --parallel --filter @hostpog/web --filter @hostpog/ingest start",
+    "typecheck": "pnpm -r typecheck",
+    "test": "node scripts/with-env.mjs pnpm -r --workspace-concurrency=1 test",
+    "test:e2e": "node scripts/with-env.mjs pnpm --filter @hostpog/web test:e2e",
+    "posthog:smoke": "node scripts/with-env.mjs pnpm --filter @hostpog/posthog smoke"
+  },
+  "devDependencies": {
+    "@tinybirdco/sdk": "^0.0.84",
+    "@types/node": "^22.19.0",
+    "typescript": "5.9.3",
+    "vitest": "5.1.1"
+  }
+}
