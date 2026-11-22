@@ -1,0 +1,45 @@
+# Saves GitHub traffic once a day to the `stats` branch, because GitHub only keeps 14 days.
+# Needs a repository secret TRAFFIC_TOKEN: a fine-grained token for this repo with
+# "Administration: Read-only" (GitHub's traffic API requires it; the built-in token can't read traffic).
+name: traffic snapshot
+
+on:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Check out the stats branch (created on first run)
+        run: |
+          git fetch origin stats || true
+          if git rev-parse --verify origin/stats >/dev/null 2>&1; then
+            git worktree add stats origin/stats
+            git -C stats checkout -B stats
+          else
+            git worktree add --detach stats
+            git -C stats checkout --orphan stats
+            git -C stats rm -rf . >/dev/null 2>&1 || true
+          fi
+      - name: Fetch traffic and merge into CSV files
+        env:
+          GH_TOKEN: ${{ secrets.TRAFFIC_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: bash scripts/traffic-snapshot.sh stats
+      - name: Commit
+        run: |
+          cd stats
+          git config user.name "hostpog-stats"
+          git config user.email "stats@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet && { echo "no changes"; exit 0; }
+          git commit -m "traffic snapshot $(date -u +%F)"
+          git push origin stats

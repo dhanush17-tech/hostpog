@@ -63,6 +63,23 @@ HOSTPOG_AI_ALLOWED_PRIVATE_HOSTS=host.docker.internal
 EOF
 }
 
+ask_telemetry() {
+  grep -q '^HOSTPOG_TELEMETRY=' "$ENV_FILE" && return
+  local answer=n
+  if [ -t 0 ]; then
+    echo
+    say "Help improve HostPog?"
+    echo "Send one anonymous ping a day: version, team size and usage as rough buckets, and which features are on."
+    echo "Never your events, users, emails or keys. Details: README, Telemetry. Change it any time in $ENV_FILE."
+    printf 'Share anonymous usage stats? [Y/n] '
+    read -r answer || answer=n
+    answer=${answer:-y}
+  fi
+  case "$answer" in [Yy]*) v=1 ;; *) v=0 ;; esac
+  printf '# Anonymous daily usage ping (1 = on, 0 = off). See README, Telemetry.\nHOSTPOG_TELEMETRY=%s\n' "$v" >>"$ENV_FILE"
+  [ "$v" = 1 ] && echo "Thanks! Anonymous stats on." || echo "Anonymous stats off."
+}
+
 wait_healthy() {
   local url
   url=$(grep '^HOSTPOG_PUBLIC_URL=' "$ENV_FILE" | cut -d= -f2-)
@@ -91,12 +108,12 @@ wait_healthy() {
 cmd=${1:-up}
 case "$cmd" in
   up)
-    need_docker; ensure_env
+    need_docker; ensure_env; ask_telemetry
     say "Building and starting HostPog…"
     "${COMPOSE[@]}" up -d --build
     wait_healthy ;;
   update)
-    need_docker; ensure_env
+    need_docker; ensure_env; ask_telemetry
     "${COMPOSE[@]}" up -d --build --force-recreate migrate ingest web
     wait_healthy ;;
   down) need_docker; "${COMPOSE[@]}" down ;;

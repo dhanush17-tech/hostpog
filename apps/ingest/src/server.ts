@@ -18,6 +18,7 @@ import { Redis } from "ioredis";
 import { randomUUID } from "node:crypto";
 import { registerPostHogCompat } from "./posthog-compat";
 import { createProducts } from "./products";
+import { startTelemetry } from "./telemetry";
 import { startWorkflowDelivery } from "./workflow-delivery";
 
 interface KeyInfo {
@@ -172,8 +173,10 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const stopDelivery = process.env.HOSTPOG_WORKFLOWS_DISABLED === "true" ? () => {} : startWorkflowDelivery(app.log);
   const stopJobs = process.env.HOSTPOG_JOB_RUNNER === "worker" ? startJobWorker(app.log) : null;
   if (stopJobs) app.log.info("job worker started");
+  const stopTelemetry = startTelemetry(app.log);
   const shutdown = async () => {
     stopDelivery();
+    stopTelemetry();
     await stopJobs?.();
     await app.close();
     process.exit(0);

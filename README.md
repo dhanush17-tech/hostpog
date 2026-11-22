@@ -148,6 +148,22 @@ docs/               architecture, PostHog contract, load test, screenshots
 
 </details>
 
+## Telemetry
+
+`./hostpog up` asks once whether to share anonymous usage stats. If you say yes, the ingest service sends one event a
+day. Here is everything in it ([source](apps/ingest/src/telemetry.ts)):
+
+| Field | Example |
+|---|---|
+| install id: a one-way hash, not linked to you | `61e68c12…` |
+| version, OS, CPU architecture | `0.1.0`, `linux`, `x64` |
+| team size, workspaces, projects (buckets) | `6-20`, `1`, `2-3` |
+| events per day (bucket) | `10001-100000` |
+| which features are on | flags, experiments, surveys, workflows, AI, logs: yes or no |
+
+Never sent: your events, users, emails, names, URLs or keys. Turn it off any time with `HOSTPOG_TELEMETRY=0` in
+`deploy/.env`, then `./hostpog update`.
+
 ## Contributing
 
 Issues and pull requests are welcome. Start with [CONTRIBUTING.md](CONTRIBUTING.md). For security reports, see

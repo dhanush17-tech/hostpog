@@ -6,6 +6,15 @@ import path from "node:path";
 const rootEnv = path.join(import.meta.dirname, "../../.env");
 if (existsSync(rootEnv)) process.loadEnvFile(rootEnv);
 
+// The hosted site counts its own visits with HostPog (components/landing/site-analytics.tsx).
+const analyticsOrigin = (() => {
+  try {
+    return process.env.NEXT_PUBLIC_SITE_ANALYTICS_HOST ? new URL(process.env.NEXT_PUBLIC_SITE_ANALYTICS_HOST).origin : "";
+  } catch {
+    return "";
+  }
+})();
+
 const securityHeaders = [
   { key: "X-Frame-Options", value: "DENY" },
   { key: "X-Content-Type-Options", value: "nosniff" },
@@ -21,7 +30,7 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob:",
       "font-src 'self'",
-      "connect-src 'self'",
+      `connect-src 'self'${analyticsOrigin ? ` ${analyticsOrigin}` : ""}`,
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self' https://us.posthog.com https://eu.posthog.com",
