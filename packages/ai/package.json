@@ -20,6 +20,6 @@
     "@hostpog/contracts": "workspace:*",
     "ai": "7.0.176",
     "zod": "4.6.7",
-    "undici": "7.16.0"
+    "undici": "8.13.1"
   }
 }
