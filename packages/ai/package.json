@@ -12,13 +12,13 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "4.0.106",
-    "@ai-sdk/google": "4.0.122",
-    "@ai-sdk/openai": "4.0.121",
-    "@ai-sdk/openai-compatible": "3.0.93",
+    "@ai-sdk/anthropic": "4.0.107",
+    "@ai-sdk/google": "4.0.125",
+    "@ai-sdk/openai": "4.0.122",
+    "@ai-sdk/openai-compatible": "3.0.94",
     "@hostpog/analytics": "workspace:*",
     "@hostpog/contracts": "workspace:*",
-    "ai": "7.0.176",
+    "ai": "7.0.181",
     "zod": "4.6.7",
     "undici": "7.16.0"
   }
